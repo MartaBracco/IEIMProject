@@ -79,7 +79,6 @@ colorPoint readRGB_csens()
 
 	return readColor;
 
-	//White LED value correction TBD
 
 
 	u32 red_, green_, blue_;
@@ -91,10 +90,7 @@ colorPoint readRGB_csens()
 	double TMP;
 
 
-u8 ledStatus;
 
-
-	if ( ledStatus == 1 )
 		{
 			red_  = red_  * 1.70;
 			blue_ = blue_ * 1.35;
@@ -114,88 +110,4 @@ u8 ledStatus;
 				blue_	*= TMP;
 			}
 		}
-		if ( ledStatus == 0 )
-		{
-			if (red_> green_)
-				maxColor = red_;
-			else maxColor = green_;
-
-				if (blue_ > maxColor)
-					maxColor = blue_;
-
-			tmp = 250.0/maxColor;
-			green_	*= TMP;
-			red_ 	*= TMP;
-			blue_	*= TMP;
-
-
-
-		int minColor;
-
-		if (red_< green_)
-			minColor = red_;
-		else minColor = green_;
-
-			if (blue_ < minColor) //the original code calculates the minimum between blue and maxColor (?)
-				minColor = blue_;
-
-
-		int greenTmp = green_;
-		int redTmp 	 = red_;
-		int blueTmp	 = blue_;
-
-	//when turn on LED, need to adjust the RGB data,otherwise it is almost the white color
-		if(red_ < 0.8*maxColor && red_ >= 0.6*maxColor)
-		{
-			red_ *= 0.4;
-	    }
-		else if(red_ < 0.6*maxColor)
-		{
-			red_ *= 0.2;
-	    }
-
-		if(green_ < 0.8*maxColor && green_ >= 0.6*maxColor)
-		{
-			green_ *= 0.4;
-	    }
-		else if(green_ < 0.6*maxColor)
-		{
-			if (maxColor == redTmp && greenTmp >= 2*blueTmp && greenTmp >= 0.2*redTmp)				//orange
-			{
-				green_ *= 5;
-			}
-			green_ *= 0.2;
-	    }
-
-		if(blue_ < 0.8*maxColor && blue_ >= 0.6*maxColor)
-		{
-			blue_ *= 0.4;
-	    }
-		else if(blue_ < 0.6*maxColor)
-		{
-			if (maxColor == redTmp && greenTmp >= 2*blueTmp && greenTmp >= 0.2*redTmp)				//orange
-			{
-				blue_ *= 0.5;
-			}
-			if (maxColor == redTmp && greenTmp <= blueTmp && blueTmp >= 0.2*redTmp)					//pink
-			{
-				blue_  *= 5;
-			}
-			blue_ *= 0.2;
-	    }
-
-		if (red_< green_)
-			minColor = red_;
-		else minColor = green_;
-
-			if (blue_ < minColor) //the original code calculates the minimum between blue and maxColor (?)
-				minColor = blue_;
-
-		if(maxColor == green_ && red_ >= 0.85*maxColor && minColor == blue_)						//yellow
-		{
-			red_ = maxColor;
-			blue_ *= 0.4;
-	    }
-*/
-
-	}
+		
