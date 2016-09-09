@@ -1,13 +1,13 @@
+
 /*
  * grove_colorsens.c
- *
- *  Created on: 22/giu/2016
- *      Author: exeless
  */
 
 #include "pmod.h"
 #include "grove_colorsens.h"
+#include "math.h"
 #include "microblaze_sleep.h"
+
 
 void init_csens()
 {
@@ -22,14 +22,9 @@ int write_csens(u8 reg, u32 data, u8 bytes)
 {
 	   u8 data_buffer[3];
 	   data_buffer[0] = reg;
-	   if(bytes ==2){
-	      data_buffer[1] = data & 0x0f; // Bits 11:8
-	      data_buffer[2] = data & 0xff; // Bits 7:0
-	   }else{
-	      data_buffer[1] = data & 0xff; // Bits 7:0
-	   }
+	  data_buffer[1] = data & 0xff; //bits 7:0
 
-	   return iic_write(0,COLOR_SENSOR_ADDR, data_buffer, bytes+1);
+	   return iic_write(0,COLOR_SENSOR_ADDR, data_buffer, 2);
 }
 
 u32 read_csens(u8 reg){
@@ -37,16 +32,16 @@ u32 read_csens(u8 reg){
    u32 sample;
 
    data_buffer[0] = reg; // Set the address pointer register
-   iic_write(0, COLOR_SENSOR_ADDR, data_buffer, 1);
+   iic_write (0,COLOR_SENSOR_ADDR, data_buffer, 1);
 
    iic_read(0, COLOR_SENSOR_ADDR,data_buffer,2);
-   sample = ((data_buffer[0]&0x0f) << 8) | data_buffer[1];
+   sample = data_buffer[0];
    return sample;
 }
 
 colorPoint readRGB_csens()
 {
-	u32 readData[8];
+	u8 readData[9];
 	colorPoint readColor;
 
 	/*begin transmission*/
@@ -54,95 +49,153 @@ colorPoint readRGB_csens()
 	write_csens(REG_CTL,0x03,1);
 
 	/*wait for data*/
-	MB_Sleep(100); //TO BE RESOLVED
+	MB_Sleep(15); //TO BE RESOLVED
 
 	/*read Data*/
-	int i ;
-	u32 maxcol, mincol;
-	double tmp;
+	int i;
 	for(i=0;i<8;i++)
 	{
-
 		readData[i] = read_csens(REG_BLOCK_READ+i); //TO BE CHECKED
 	}
-	/*
 	readColor.Green = readData[1] << 8 | readData[0];
 	readColor.Red = readData[3] << 8 | readData[2];
 	readColor.Blue = readData[5] << 8 | readData[4];
 	readColor.Clear = readData[7] << 8 | readData[6];
-	*/
-if (1)
-{
-	if (readColor.Red > readColor.Green)
-	maxcol=readColor.Red;
-	else maxcol=readColor.Green;
-		if (readColor.Blue > maxcol)
-			maxcol=readColor.Blue;
 
-		tmp= 250.0/maxcol;
-		readColor.Green *= tmp;
-			readColor.Red *= tmp;
-			readColor.Blue *= tmp;
-}
+	//Color correction LED is OFF!
 
-		if (readColor.Red < readColor.Green)
-		mincol=readColor.Red;
-		else mincol=readColor.Green;
-			if (readColor.Blue < mincol)
-				mincol=readColor.Blue;
+	int maxColor,tmp;
+	if(readColor.Red > readColor.Green)
+		maxColor = readColor.Red;
+	else
+		maxColor = readColor.Green;
+	if(maxColor < readColor.Blue)
+		maxColor = readColor.Blue;
 
-			if (readColor.Red > readColor.Green)
-			maxcol=readColor.Red;
-			else maxcol=readColor.Green;
-				if (readColor.Blue > maxcol)
-					maxcol=readColor.Blue;
-	 u32 greentmp=readColor.Green;
-	 u32 redtmp=readColor.Red;
-	 u32 bluetmp=readColor.Blue;
-
-if (readColor.Red < 0.8 * maxcol && readColor.Red >= 0.6 * maxcol)
-	readColor.Red *= 0.4;
-	else if
-	(readColor.Red < 0.6 *maxcol)
-		readColor.Red *= 0.2;
-if (readColor.Green < 0.8 * maxcol && readColor.Green >= 0.6 * maxcol)
-	readColor.Green *= 0.4;
-else if (readColor.Green < 0.6 *maxcol)
-{ if (maxcol == redtmp && greentmp >= 2 * bluetmp && greentmp >= 0.2 * redtmp)
-	readColor.Green *= 5;
-readColor.Green *= 0.2;
-}
-
-if (readColor.Blue<0.8*maxcol && readColor.Blue >= 0.6*maxcol)
-	readColor.Blue *= 0.4;
-else if (readColor.Blue < 0.6*maxcol){
-
-		if (maxcol == redtmp && greentmp >= 2 * bluetmp && greentmp >= 0.2 * redtmp)
-			readColor.Blue *= 0.5;
-		if (maxcol == redtmp && greentmp <= bluetmp && bluetmp >= 0.2 * redtmp)
-			readColor.Blue *= 5;
-
-		readColor.Blue *= 0.2;
-}
-
-if (readColor.Red < readColor.Green)
-		mincol=readColor.Red;
-		else mincol=readColor.Green;
-
-			if (readColor.Blue < mincol)
-				mincol=readColor.Blue;
-
-if (maxcol == readColor.Green && readColor.Red >= 0.85 * maxcol && mincol == readColor.Blue){
-	readColor.Red = maxcol;
-	readColor.Blue *= 0.4;
-}
-
+	tmp = 255.0/maxColor;
+	readColor.Green *= tmp;
+	readColor.Red *= tmp;
+	readColor.Blue *= tmp;
 
 	return readColor;
 
-	/*White LED value correction TBD*/
-}
+	//White LED value correction TBD
+
+
+	u32 red_, green_, blue_;
+
+	red_ = readColor.Red;
+	green_ = readColor.Green;
+	blue_ = readColor.Blue;
+
+	double TMP;
+
+
+u8 ledStatus;
+
+
+	if ( ledStatus == 1 )
+		{
+			red_  = red_  * 1.70;
+			blue_ = blue_ * 1.35;
+
+			if (red_> green_)
+				maxColor = red_;
+			else maxColor = green_;
+
+				if (blue_ > maxColor)
+					maxColor = blue_;
+
+			if(maxColor > 255)
+			{
+				TMP = 250.0/maxColor;
+				green_	*= TMP;
+				red_ 	*= TMP;
+				blue_	*= TMP;
+			}
+		}
+		if ( ledStatus == 0 )
+		{
+			if (red_> green_)
+				maxColor = red_;
+			else maxColor = green_;
+
+				if (blue_ > maxColor)
+					maxColor = blue_;
+
+			tmp = 250.0/maxColor;
+			green_	*= TMP;
+			red_ 	*= TMP;
+			blue_	*= TMP;
 
 
 
+		int minColor;
 
+		if (red_< green_)
+			minColor = red_;
+		else minColor = green_;
+
+			if (blue_ < minColor) //the original code calculates the minimum between blue and maxColor (?)
+				minColor = blue_;
+
+
+		int greenTmp = green_;
+		int redTmp 	 = red_;
+		int blueTmp	 = blue_;
+
+	//when turn on LED, need to adjust the RGB data,otherwise it is almost the white color
+		if(red_ < 0.8*maxColor && red_ >= 0.6*maxColor)
+		{
+			red_ *= 0.4;
+	    }
+		else if(red_ < 0.6*maxColor)
+		{
+			red_ *= 0.2;
+	    }
+
+		if(green_ < 0.8*maxColor && green_ >= 0.6*maxColor)
+		{
+			green_ *= 0.4;
+	    }
+		else if(green_ < 0.6*maxColor)
+		{
+			if (maxColor == redTmp && greenTmp >= 2*blueTmp && greenTmp >= 0.2*redTmp)				//orange
+			{
+				green_ *= 5;
+			}
+			green_ *= 0.2;
+	    }
+
+		if(blue_ < 0.8*maxColor && blue_ >= 0.6*maxColor)
+		{
+			blue_ *= 0.4;
+	    }
+		else if(blue_ < 0.6*maxColor)
+		{
+			if (maxColor == redTmp && greenTmp >= 2*blueTmp && greenTmp >= 0.2*redTmp)				//orange
+			{
+				blue_ *= 0.5;
+			}
+			if (maxColor == redTmp && greenTmp <= blueTmp && blueTmp >= 0.2*redTmp)					//pink
+			{
+				blue_  *= 5;
+			}
+			blue_ *= 0.2;
+	    }
+
+		if (red_< green_)
+			minColor = red_;
+		else minColor = green_;
+
+			if (blue_ < minColor) //the original code calculates the minimum between blue and maxColor (?)
+				minColor = blue_;
+
+		if(maxColor == green_ && red_ >= 0.85*maxColor && minColor == blue_)						//yellow
+		{
+			red_ = maxColor;
+			blue_ *= 0.4;
+	    }
+*/
+
+	}
